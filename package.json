@@ -1,0 +1,31 @@
+{
+	"name": "dipay-recrutment",
+	"version": "1.0.0",
+	"description": "",
+	"main": "index.js",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"dev": "npx nodemon app.js"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/farisarmap/dipay-recrutment.git"
+	},
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"bugs": {
+		"url": "https://github.com/farisarmap/dipay-recrutment/issues"
+	},
+	"homepage": "https://github.com/farisarmap/dipay-recrutment#readme",
+	"dependencies": {
+		"bcrypt": "^5.0.1",
+		"express": "^4.17.3",
+		"jsonwebtoken": "^8.5.1",
+		"pg": "^8.7.3",
+		"pgtools": "^0.3.2"
+	},
+	"devDependencies": {
+		"nodemon": "^2.0.15"
+	}
+}
