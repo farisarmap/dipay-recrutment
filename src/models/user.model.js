@@ -14,13 +14,11 @@ module.exports = {
 			const qs = `INSERT INTO "users"("userName", "password", "fullName", "createdAt", "updatedAt")
             VALUES('${payload.userName}', '${payload.password}', '${payload.fullName}', '${payload.createdAt}', '${payload.updatedAt}') RETURNING *`
 			pool.query(qs, (err, data) => {
-				if (err) reject(err)
+				if (err)
+					reject({ status: 500, message: "Internal server error" })
 				else {
 					resolve({
-						status: 201,
-						message: "Success create user",
-						data,
-						userId: data.rows[0].id,
+						user: data.rows[0],
 					})
 				}
 			})
@@ -33,26 +31,27 @@ module.exports = {
 			const qs = `SELECT * from "users" WHERE "userName"='${userName}'`
 			pool.query(qs, (err, data) => {
 				const userByUserName = data.rows[0]
-				const verifyUser = comparePassword(
-					password,
-					userByUserName.password
-				)
-				if (!verifyUser) {
-					reject({ status: 401, message: "Unauthorized!" })
-				} else if (verifyUser) {
-					const token = generateToken({
-						userName: userByUserName.userName,
-					})
-					const insertToken = `UPDATE "users" SET "token"='${token}' WHERE id='${userByUserName.id}'`
-					pool.query(insertToken, (err, data) => {
-						resolve({
-							status: 201,
-							response: {
-								status: "Success",
-								access_token: token,
-							},
+				if (!userByUserName) {
+					reject({ status: 401, message: "User not Found" })
+				} else {
+					const verifyUser = comparePassword(
+						password,
+						userByUserName.password
+					)
+					if (!verifyUser) {
+						reject({ status: 401, message: "Password invalid!" })
+					} else if (verifyUser) {
+						const token = generateToken({
+							userName: userByUserName.userName,
 						})
-					})
+						const insertToken = `UPDATE "users" SET "token"='${token}' WHERE id='${userByUserName.id}' RETURNING *`
+						pool.query(insertToken, (err, data) => {
+							resolve({
+								token: token,
+								refreshToken: data.rows[0].token,
+							})
+						})
+					}
 				}
 			})
 		})
@@ -62,19 +61,18 @@ module.exports = {
 			const token = body.refreshToken
 			const qs = `SELECT * FROM "users" WHERE "token"='${token}'`
 			pool.query(qs, (err, data) => {
-				if (err) reject(err)
 				const user = data.rows[0]
-				const getNewToken = generateToken({ userName: user.userName })
-				const updateToken = `UPDATE "users" SET "token"='${getNewToken}' WHERE id='${user.id}'`
-				pool.query(updateToken, (err, data) => {
-					resolve({
-						status: 200,
-						response: {
-							status: "Success",
-							access_token: getNewToken,
-						},
+				if (user) {
+					const getNewToken = generateToken({
+						userName: user.userName,
 					})
-				})
+					const updateToken = `UPDATE "users" SET "token"='${getNewToken}' WHERE id='${user.id}' RETURNING *`
+					pool.query(updateToken, (err, data) => {
+						resolve({ token: data.rows[0].token })
+					})
+				} else if (!user) {
+					reject({ status: 500, message: "User not found!" })
+				}
 			})
 		})
 	},
@@ -85,17 +83,28 @@ module.exports = {
 			pool.query(qs, (err, data) => {
 				if (err) reject(err)
 				const user = data.rows[0]
-				const updateToken = `UPDATE "users" SET "token"=NULL WHERE id='${user.id}'`
-				pool.query(updateToken, (err, result) => {
-					if (err) reject(err)
-					resolve({
-						status: 200,
-						response: {
-							status: "Success",
-							message: "Success delete token",
-						},
+				if (user) {
+					const updateToken = `UPDATE "users" SET "token"=NULL WHERE id='${user.id}'`
+					pool.query(updateToken, (err, result) => {
+						if (err)
+							reject({
+								status: 500,
+								message: "Internal server error",
+							})
+						if (result) {
+							resolve({
+								status: "Success",
+							})
+						} else if (!result) {
+							reject({
+								status: 500,
+								message: "Fail delete token",
+							})
+						}
 					})
-				})
+				} else {
+					reject({ status: 401, message: "User not found!" })
+				}
 			})
 		})
 	},
@@ -104,8 +113,10 @@ module.exports = {
 			const qs = `SELECT * from "users" WHERE "userName"='${userName}'`
 			pool.query(qs, (err, result) => {
 				if (err) reject(err)
-				else {
+				if (result) {
 					resolve(result.rows[0])
+				} else if (!result) {
+					reject({ status: 401, message: "User not found!" })
 				}
 			})
 		})
