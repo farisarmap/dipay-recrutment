@@ -10,6 +10,7 @@
     - HOST=localhost
     - DB=dipay
     - PASSWORD=postgres
+    - SALT=10
     ```
 3. `node .\src\config\db.js`
 4. `node .\src\migrations\user.js`
